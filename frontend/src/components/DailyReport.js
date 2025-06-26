@@ -7,8 +7,19 @@ function DailyReport({ onLogout }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getDailyReport().then((res) => setReport(res.data));
-  }, []);
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    getDailyReport(token)
+      .then((res) => setReport(res.data))
+      .catch((err) => {
+        if (err.response && err.response.status === 401) {
+          onLogout();
+        }
+      });
+  }, [navigate, onLogout]);
 
   return (
     <div style={{ maxWidth: 800, margin: "auto", marginTop: 40 }}>

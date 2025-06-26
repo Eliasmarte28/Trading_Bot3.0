@@ -1,27 +1,30 @@
 import requests
 
 class CapitalComAPI:
-    def __init__(self, email=None, password=None, api_key=None, api_key_password=None, demo=True, session_token=None, login_context=None):
-        self.api_base = "https://demo-api-capital.backend-capital.com" if demo else "https://api-capital.backend-capital.com"
+    """
+    Capital.com API client for real-world trading.
+    Replace all NotImplementedError sections with real HTTP request code.
+    Use self.session_token for all authenticated requests.
+    """
+    BASE_URL_LIVE = "https://api-capital.backend-capital.com"
+    BASE_URL_DEMO = "https://demo-api-capital.backend-capital.com"
+
+    def __init__(self, email, password, api_key, api_key_password, demo, login_context=None):
         self.email = email
         self.password = password
         self.api_key = api_key
         self.api_key_password = api_key_password
-        self.session_token = session_token
+        self.demo = demo
         self.login_context = login_context
-
-    def get_login_context(self):
-        # Return info needed to continue login for 2FA (could be a token or just re-use credentials)
-        return {
-            "email": self.email,
-            "password": self.password,
-            "api_key": self.api_key,
-            "api_key_password": self.api_key_password,
-            "demo": self.api_base.endswith("demo-api-capital.backend-capital.com")
-        }
+        self.session_token = None  # Set after successful login
 
     def login(self, otp=None):
-        url = f"{self.api_base}/api/v2/session"
+        """
+        Log in to Capital.com and obtain a session token.
+        Implement actual HTTP POST to /api/v1/session as per docs:
+        https://open-api.capital.com/#tag/Session
+        """
+        url = f"{self.BASE_URL_DEMO if self.demo else self.BASE_URL_LIVE}/api/v1/session"
         payload = {
             "email": self.email,
             "password": self.password,
@@ -29,40 +32,40 @@ class CapitalComAPI:
             "apiKeyPassword": self.api_key_password
         }
         if otp:
-            payload["oneTimePasscode"] = otp
-        try:
-            resp = requests.post(url, json=payload)
-            data = resp.json()
-            if resp.status_code == 403 and "oneTimePasscode" in data.get("message", ""):
-                return {"2fa_required": True}
-            if "CST" in resp.headers:
-                # Login successful, session token in header
-                return {
-                    "success": True,
-                    "session_token": resp.headers["CST"]
-                }
-            elif data.get("errorCode") == "error.security.one_time_passcode.required":
-                return {"2fa_required": True}
-            else:
-                return {
-                    "success": False,
-                    "error": data.get("message", "Unknown error")
-                }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+            payload["otp"] = otp
+        # TODO: Replace next line with real HTTP POST request and error handling
+        raise NotImplementedError("Implement Capital.com login here and return {'success': True, 'session_token': ...} or handle 2FA.")
+        # On success, set self.session_token = ... (from response)
+
+    def get_login_context(self):
+        """
+        If 2FA is needed, store any context required to continue the login after OTP.
+        """
+        # TODO: Implement as needed for 2FA context
+        return {}
 
     def get_account_info(self):
-        url = f"{self.api_base}/api/v2/accounts"
-        headers = {"Authorization": f"Bearer {self.session_token}"}
-        resp = requests.get(url, headers=headers)
-        return resp.json()
+        """
+        Get account info from Capital.com.
+        Use self.session_token for authenticated requests.
+        Implement GET /api/v1/accounts/me as per docs.
+        """
+        # url = ...
+        # headers = {"Authorization": f"Bearer {self.session_token}"}
+        # response = requests.get(url, headers=headers)
+        # return response.json()
+        raise NotImplementedError("Implement Capital.com account info retrieval here.")
 
-    def place_order(self, symbol, side, amount, take_profit=None, stop_loss=None):
-        # Implement according to Capital.com API docs
-        # Use self.session_token for auth
-        pass
+    def place_trade(self, symbol, side, amount, take_profit, stop_loss):
+        """
+        Place a trade on Capital.com.
+        Use self.session_token for authentication.
+        """
+        raise NotImplementedError("Implement Capital.com trade placement here.")
 
     def get_trades(self):
-        # Implement according to Capital.com API docs
-        # Use self.session_token for auth
-        pass
+        """
+        Get all trades for the account.
+        Use self.session_token for authentication.
+        """
+        raise NotImplementedError("Implement Capital.com trades retrieval here.")

@@ -8,6 +8,8 @@ function Dashboard({ token, onLogout }) {
   const [side, setSide] = useState("BUY");
   const [amount, setAmount] = useState(1);
   const [message, setMessage] = useState("");
+  const [takeProfit, setTakeProfit] = useState("");
+  const [stopLoss, setStopLoss] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -18,7 +20,14 @@ function Dashboard({ token, onLogout }) {
     e.preventDefault();
     setMessage("");
     try {
-      await placeTrade(token, { symbol, side, amount });
+      await placeTrade(
+        token,
+        symbol,
+        side,
+        Number(amount),
+        takeProfit ? Number(takeProfit) : undefined,
+        stopLoss ? Number(stopLoss) : undefined
+      );
       setMessage("Trade placed!");
     } catch {
       setMessage("Error placing trade.");
@@ -57,6 +66,20 @@ function Dashboard({ token, onLogout }) {
           step="0.01"
           onChange={(e) => setAmount(e.target.value)}
           placeholder="Amount"
+          style={{ marginLeft: 10, marginRight: 10 }}
+        />
+        <input
+          type="number"
+          value={takeProfit}
+          onChange={(e) => setTakeProfit(e.target.value)}
+          placeholder="Take Profit (optional)"
+          style={{ marginLeft: 10, marginRight: 10 }}
+        />
+        <input
+          type="number"
+          value={stopLoss}
+          onChange={(e) => setStopLoss(e.target.value)}
+          placeholder="Stop Loss (optional)"
           style={{ marginLeft: 10, marginRight: 10 }}
         />
         <button type="submit">Trade</button>

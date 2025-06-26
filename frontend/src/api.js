@@ -1,5 +1,8 @@
 import axios from "axios";
 
+// Set the base URL for all axios requests
+axios.defaults.baseURL = "http://localhost:8000";
+
 // Login without 2FA (initial attempt)
 export function login(username, password, apiKey, apiKeyPassword, useDemo) {
   return axios.post("/login", {
@@ -23,9 +26,11 @@ export function login2fa(username, password, apiKey, apiKeyPassword, useDemo, ot
   });
 }
 
-// Get Daily Report
-export function getDailyReport() {
-  return axios.get("/daily-report");
+// Get Daily Report (requires token)
+export function getDailyReport(token) {
+  return axios.get("/daily-report", {
+    headers: { Authorization: `Bearer ${token}` }
+  });
 }
 
 // Get Account Info (requires token)
@@ -36,6 +41,7 @@ export function getAccount(token) {
 }
 
 // Place Trade (requires token)
+// Call this with individual arguments, NOT an object:
 export function placeTrade(token, symbol, side, amount, take_profit, stop_loss) {
   return axios.post("/trade", {
     symbol,
