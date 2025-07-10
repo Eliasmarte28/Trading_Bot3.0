@@ -1,71 +1,108 @@
 import requests
+import numpy as np
+import time
 
 class CapitalComAPI:
-    """
-    Capital.com API client for real-world trading.
-    Replace all NotImplementedError sections with real HTTP request code.
-    Use self.session_token for all authenticated requests.
-    """
-    BASE_URL_LIVE = "https://api-capital.backend-capital.com"
-    BASE_URL_DEMO = "https://demo-api-capital.backend-capital.com"
-
-    def __init__(self, email, password, api_key, api_key_password, demo, login_context=None):
-        self.email = email
+    def __init__(self, identifier, password, api_key, demo, login_context=None):
+        self.identifier = identifier
         self.password = password
         self.api_key = api_key
-        self.api_key_password = api_key_password
         self.demo = demo
         self.login_context = login_context
-        self.session_token = None  # Set after successful login
-
-    def login(self, otp=None):
-        """
-        Log in to Capital.com and obtain a session token.
-        Implement actual HTTP POST to /api/v1/session as per docs:
-        https://open-api.capital.com/#tag/Session
-        """
-        url = f"{self.BASE_URL_DEMO if self.demo else self.BASE_URL_LIVE}/api/v1/session"
-        payload = {
-            "email": self.email,
-            "password": self.password,
-            "apiKey": self.api_key,
-            "apiKeyPassword": self.api_key_password
-        }
-        if otp:
-            payload["otp"] = otp
-        # TODO: Replace next line with real HTTP POST request and error handling
-        raise NotImplementedError("Implement Capital.com login here and return {'success': True, 'session_token': ...} or handle 2FA.")
-        # On success, set self.session_token = ... (from response)
+        self.session_token = None  # Store the session token if available
+        # Capital.com base URL
+        self.base_url = (
+            "https://api-capital.backend-capital.com"
+            if not demo else
+            "https://demo-api-capital.backend-capital.com"
+        )
 
     def get_login_context(self):
-        """
-        If 2FA is needed, store any context required to continue the login after OTP.
-        """
-        # TODO: Implement as needed for 2FA context
-        return {}
+        # Placeholder for storing intermediate login/2FA state if needed
+        return {"identifier": self.identifier}
+
+    def login(self, otp=None):
+        url = f"{self.base_url}/api/v1/session"
+        headers = {
+            "Content-Type": "application/json",
+            "X-CAP-API-KEY": self.api_key,
+        }
+        payload = {
+            "identifier": self.identifier,
+            "password": self.password,
+            "encryptedPassword": False,
+        }
+        if otp:
+            payload["2faCode"] = otp
+        try:
+            resp = requests.post(url, json=payload, headers=headers)
+            data = resp.json()
+            print("Capital.com API response:", data)  # For debugging
+            # Store session token if present
+            if resp.status_code == 200 and "session" in data:
+                self.session_token = data["session"]
+            if resp.status_code == 200 and "currentAccountId" in data:
+                # Success! Return all relevant account info.
+                result = {"success": True}
+                result.update(data)
+                return result
+            elif data.get("2fa_required") or data.get("2faRequired"):
+                return {"success": False, "2fa_required": True}
+            else:
+                return {"success": False, "error": data.get("error", "Login failed")}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def get_account_info(self):
-        """
-        Get account info from Capital.com.
-        Use self.session_token for authenticated requests.
-        Implement GET /api/v1/accounts/me as per docs.
-        """
-        # url = ...
-        # headers = {"Authorization": f"Bearer {self.session_token}"}
-        # response = requests.get(url, headers=headers)
-        # return response.json()
-        raise NotImplementedError("Implement Capital.com account info retrieval here.")
-
-    def place_trade(self, symbol, side, amount, take_profit, stop_loss):
-        """
-        Place a trade on Capital.com.
-        Use self.session_token for authentication.
-        """
-        raise NotImplementedError("Implement Capital.com trade placement here.")
+        url = f"{self.base_url}/api/v1/accounts"
+        headers = {
+            "X-CAP-API-KEY": self.api_key,
+        }
+        # Add Authorization header if session_token is present
+        if self.session_token:
+            headers["Authorization"] = f"Bearer {self.session_token}"
+        try:
+            resp = requests.get(url, headers=headers)
+            return resp.json()
+        except Exception as e:
+            return {"error": str(e)}
 
     def get_trades(self):
-        """
-        Get all trades for the account.
-        Use self.session_token for authentication.
-        """
-        raise NotImplementedError("Implement Capital.com trades retrieval here.")
+        url = f"{self.base_url}/api/v1/history/transactions"
+        headers = {
+            "X-CAP-API-KEY": self.api_key,
+        }
+        # Add Authorization header if session_token is present
+        if self.session_token:
+            headers["Authorization"] = f"Bearer {self.session_token}"
+        try:
+            resp = requests.get(url, headers=headers)
+            data = resp.json()
+            return data.get("transactions", [])
+        except Exception as e:
+            return []
+
+    def place_trade(self, symbol, side, amount, take_profit=None, stop_loss=None):
+        url = f"{self.base_url}/api/v1/orders"
+        headers = {
+            "X-CAP-API-KEY": self.api_key,
+            "Content-Type": "application/json",
+        }
+        # Add Authorization header if session_token is present
+        if self.session_token:
+            headers["Authorization"] = f"Bearer {self.session_token}"
+        payload = {
+            "epic": symbol,
+            "direction": side.upper(),
+            "size": amount,
+            "orderType": "MARKET",
+        }
+        if take_profit:
+            payload["takeProfit"] = take_profit
+        if stop_loss:
+            payload["stopLoss"] = stop_loss
+        try:
+            resp = requests.post(url, json=payload, headers=headers)
+            return resp.json()
+        except Exception as e:
+            return {"error": str(e)}

@@ -1,62 +1,81 @@
-import axios from "axios";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
-// Set the base URL for all axios requests
-axios.defaults.baseURL = "http://localhost:8000";
-
-// Login without 2FA (initial attempt)
-export function login(username, password, apiKey, apiKeyPassword, useDemo) {
-  return axios.post("/login", {
-    username,
-    password,
-    api_key: apiKey,
-    api_key_password: apiKeyPassword,
-    use_demo: useDemo,
+// Signup
+export async function signup(data) {
+  const res = await fetch(`${API_URL}/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
+  return res.json();
 }
 
-// Login with 2FA (OTP)
-export function login2fa(username, password, apiKey, apiKeyPassword, useDemo, otp) {
-  return axios.post("/login-2fa", {
-    username,
-    password,
-    api_key: apiKey,
-    api_key_password: apiKeyPassword,
-    use_demo: useDemo,
-    otp,
+// Login
+export async function login(data) {
+  const res = await fetch(`${API_URL}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
+  return res.json();
 }
 
-// Get Daily Report (requires token)
-export function getDailyReport(token) {
-  return axios.get("/daily-report", {
-    headers: { Authorization: `Bearer ${token}` }
+// Get Account Info
+export async function getAccount(token) {
+  const res = await fetch(`${API_URL}/account`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
+  return res.json();
 }
 
-// Get Account Info (requires token)
-export function getAccount(token) {
-  return axios.get("/account", {
-    headers: { Authorization: `Bearer ${token}` }
+// Place Trade
+export async function placeTrade(token, symbol, side, amount, take_profit, stop_loss) {
+  const res = await fetch(`${API_URL}/trade`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ symbol, side, amount, take_profit, stop_loss }),
   });
+  return res.json();
 }
 
-// Place Trade (requires token)
-// Call this with individual arguments, NOT an object:
-export function placeTrade(token, symbol, side, amount, take_profit, stop_loss) {
-  return axios.post("/trade", {
-    symbol,
-    side,
-    amount,
-    take_profit,
-    stop_loss,
-  }, {
-    headers: { Authorization: `Bearer ${token}` }
+// Get Trades
+export async function getTrades(token) {
+  const res = await fetch(`${API_URL}/trades`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
+  return res.json();
 }
 
-// Get Trades (requires token)
-export function getTrades(token) {
-  return axios.get("/trades", {
-    headers: { Authorization: `Bearer ${token}` }
+// Get Daily Report
+export async function getDailyReport(token) {
+  const res = await fetch(`${API_URL}/daily-report`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
+  return res.json();
+}
+
+// Get Risk Settings
+export async function getRiskSettings(token) {
+  const res = await fetch(`${API_URL}/risk-settings`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to fetch risk settings");
+  return res.json();
+}
+
+// Set Risk Settings
+export async function setRiskSettings(token, settings) {
+  const res = await fetch(`${API_URL}/risk-settings`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) throw new Error("Failed to save risk settings");
+  return res.json();
 }

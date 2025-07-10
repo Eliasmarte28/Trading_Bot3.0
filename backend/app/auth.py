@@ -5,16 +5,20 @@ from fastapi.security import OAuth2PasswordBearer
 from .models import User
 import json
 import os
+from passlib.context import CryptContext
 
-SECRET_KEY = "super_secret_key"
+SECRET_KEY = os.getenv("SECRET_KEY", "dev_insecure_secret_key")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
-USERS_FILE = "users.json"
+USERS_FILE = os.getenv("USERS_FILE", "users.json")
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 def load_users():
+    print("Loading users from:", USERS_FILE)
     if not os.path.exists(USERS_FILE):
         return {}
     with open(USERS_FILE, "r") as f:
@@ -29,14 +33,26 @@ def upsert_user(user: User):
     users[user.username] = user.dict()
     save_users(users)
 
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
 def authenticate_user(username: str, password: str) -> User:
     users = load_users()
+    print(f"Loaded users: {list(users.keys())}")
     user_data = users.get(username)
+    print(f"User data for {username!r}: {user_data}")
     if not user_data:
+        print("User not found")
         return None
-    # NOTE: For this multi-user fix, password check is only used for 2FA step.
-    if user_data["password"] != password:
+    if not verify_password(password, user_data["password"]):
+        print("Password does not match!")
+        print(f"Password tried: {password!r}")
+        print(f"Password hash: {user_data['password']!r}")
         return None
+    print("Password verified!")
     return User(**user_data)
 
 def create_access_token(username: str):
